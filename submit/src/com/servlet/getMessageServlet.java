@@ -20,9 +20,7 @@ public class getMessageServlet extends HttpServlet {
 		Updata updata = new Updata();
 		AttentionMessage am = new AttentionMessage();
 		try {
-			ArrayList<Message> ls = new ArrayList<Message>();
-			ls.addAll(updata.getMessage(uid));
-			am.setAls(ls);
+			am.setAls(updata.getMessage(uid));
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

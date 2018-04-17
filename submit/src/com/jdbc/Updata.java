@@ -2,9 +2,9 @@ package com.jdbc;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.ArrayList;
+import java.util.List;
 
 import com.javaBean.Comment;
-import com.javaBean.CommentList;
 import com.javaBean.Message;
 import com.jdbc.iconnable;
 import com.mysql.jdbc.Statement;
@@ -17,42 +17,54 @@ public class Updata  implements iconnable{
 	 * 1.此用户可见的所有动态的messageList集:包括 message的content、picture、location、love、islove、commentList(comid,comuid,comcont)
 	 */
 	public ArrayList<Message> getMessage(int uid) throws Exception{
+		
 		//访问message表,得到所有的 mid，content，picture，location，love 的值
-		String sql = "select id,content,picture,location,love from t_friend_circle_message "
-				+ "where id=any(select msgid from t_friend_circle_attentionmsg where uid="+uid+") "
+		String sql = "select id,uid,content,picture,location,love from t_friend_circle_message "
+				+ "where id=any(select mid from t_friend_circle_attentionmsg where uid="+uid+") "
 						+ "order by create_time desc";
 		PreparedStatement ptmt = conn.prepareStatement(sql);
 		ResultSet rs = ptmt.executeQuery();
-		//访问comment表，得到 各条mid的评论的uid和comment
-		String sql1 = "select uid,comment from t_friend_circle_comment where mid="+rs.getInt("id");
-		PreparedStatement ptmt1 = conn.prepareStatement(sql1);
-		ResultSet rs1 = ptmt1.executeQuery();
-		CommentList comlt = new CommentList();
-		while(rs1.next()){
-			Comment com = new Comment();
-			com.setMid(rs.getInt("id"));
-			com.setUid(rs1.getInt("uid"));
-			com.setComment(rs1.getString("comment"));
-			comlt.getAlc().add(com);
-		}
-		//访问attention表，返回此uid用户是否关注了此条动态
-		String sql2 = "select islove from t_friend_circle_attention where uid="+uid+" and mid="+rs.getInt("id");
-		PreparedStatement ptmt2 = conn.prepareStatement(sql2);
-		ResultSet rs2 = ptmt2.executeQuery();
-		//将message表和comment表和attention表中的数据都保存到一个Message对象中，并放到<Message>list中
-		ArrayList<Message> ls=new ArrayList<Message>();
+		
+		ArrayList<Message> mls=new ArrayList<Message>();		//创建message 的list （———因为一个用户要看到多条动态———）
 		while(rs.next()){
+			/**
+			 * 		为什么把sql1和sql2放在while()里？
+			 * 1.sql1和sql2用到了rs.getint()，必须先要有rs.next()，否则会有空指针异常;
+			 * 2.一次while里是一条动态，一条动态有他自己的islove和comment
+			 */
+			//访问attention表，返回此uid用户是否关注了此条动态
+			String sql2 = "select islove from t_friend_circle_attentionmsg where uid="+uid+" and mid="+rs.getInt("id");
+			PreparedStatement ptmt2 = conn.prepareStatement(sql2);
+			ResultSet rs2 = ptmt2.executeQuery();
+			//访问comment表，得到 各条mid的评论的uid和comment
+			String sql1 = "select uid,comment from t_friend_circle_comment where mid="+rs.getInt("id");
+			PreparedStatement ptmt1 = conn.prepareStatement(sql1);
+			ResultSet rs1 = ptmt1.executeQuery();
+			
+			List<Comment> cls=new ArrayList<Comment>();			//创建comment的list  （———因为一条动态应该有多条评论———）
+			while(rs1.next()){
+				Comment com = new Comment();
+				com.setMid(rs.getInt("id"));
+				com.setUid(rs1.getInt("uid"));
+				com.setComment(rs1.getString("comment"));
+				cls.add(com);
+			}
+			
+			//将content、picture、location、love、comlist和islove保存到一个message对象中，都保存到一个Message对象中，并放到<Message>list中
 			Message message=new Message();
+			message.setMuid(rs.getInt("uid"));
 			message.setContent(rs.getString("content"));
 			message.setPicture(rs.getString("picture"));
 			message.setLocation(rs.getString("location"));
 			message.setLove(rs.getString("love"));
+			while(rs2.next()){
 			message.setIslove(rs2.getInt("islove"));
-			message.setComlt(comlt);
-			ls.add(message);
+			}
+			message.setComlt(cls);
+			mls.add(message);
 		}
 		
-		return ls;
+		return mls;
 	}
 	
 	//发布动态，同时要“通知”关注了动态发布者的用户

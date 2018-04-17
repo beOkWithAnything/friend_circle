@@ -39,8 +39,15 @@
 -->
         <c:if test="${ message!=null }" >
         <c:forEach items="${message.als}" var="li">
-			${li.content} <br>
-			<img src="${pageContext.request.contextPath}/${ li.location }/${ li.picture }">
+            muid    : ${li.muid} <br>
+			Content: ${li.content} <br>
+			picture: <br><img src="${pageContext.request.contextPath}/${ li.location }/${ li.picture }"> <br>
+			Love   : ${li.love}  <br>
+			isLove : ${li.isLove} <br>
+			comment: <br>
+					 <c:forEach items="${li.comlt}" var="comli">
+						${comli.uid} : ${comli.comment} <br>
+					 </c:forEach>
 			<br>
 		</c:forEach>
         </c:if>
